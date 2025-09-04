@@ -1,3 +1,5 @@
+namespace SplititAssignment.Domain.Entities;
+
 public sealed class Actor
 {
     public Guid Id { get; init; } = Guid.NewGuid();
