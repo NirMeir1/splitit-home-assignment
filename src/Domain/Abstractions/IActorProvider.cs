@@ -1,3 +1,5 @@
+using SplititAssignment.Domain.Entities;
+
 namespace SplititAssignment.Domain.Abstractions;
 
 public interface IActorProvider

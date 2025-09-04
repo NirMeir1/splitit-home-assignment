@@ -1,3 +1,5 @@
+using SplititAssignment.Domain.Enums;
+
 namespace SplititAssignment.Domain.Entities;
 
 public sealed class Actor
