@@ -3,13 +3,13 @@ using SplititAssignment.Domain.Entities;
 
 namespace SplititAssignment.Application.Actors.Mapping;
 
-public static class ActorMappings
+public static class ActorMapping
 {
     public static ActorListItemDto ToListItemDto(this Actor a)
-        => new(a.Id, a.Name);
+        => new ActorListItemDto(a.Id, a.Name);
 
     public static ActorDetailsDto ToDetailsDto(this Actor a)
-        => new()
+        => new ActorDetailsDto
         {
             Id = a.Id,
             Name = a.Name,
@@ -17,22 +17,18 @@ public static class ActorMappings
             ImageUrl = a.ImageUrl,
             KnownFor = a.KnownFor,
             PrimaryProfession = a.PrimaryProfession,
-            TopMovies = a.TopMovies.AsReadOnly(),
-            Source = a.Source.ToString(),
+            TopMovies = (a.TopMovies ?? new List<string>()).ToList(), // IReadOnlyList ok
+            Source = a.Source.ToString(), // enum -> string
             ExternalId = a.ExternalId
         };
 
-    public static void Apply(this Actor entity, ActorCreateUpdateDto dto)
+    public static void Apply(this Actor target, ActorCreateUpdateDto dto)
     {
-        entity.Name = dto.Name.Trim();
-        entity.Rank = dto.Rank;
-        entity.ImageUrl = dto.ImageUrl?.Trim();
-        entity.KnownFor = dto.KnownFor?.Trim();
-        entity.PrimaryProfession = dto.PrimaryProfession?.Trim();
-        entity.TopMovies = dto.TopMovies is null
-            ? new List<string>()
-            : dto.TopMovies.Where(s => !string.IsNullOrWhiteSpace(s))
-                           .Select(s => s.Trim())
-                           .ToList();
+        target.Name = dto.Name.Trim();
+        target.Rank = dto.Rank;
+        target.ImageUrl = dto.ImageUrl;
+        target.KnownFor = dto.KnownFor;
+        target.PrimaryProfession = dto.PrimaryProfession;
+        target.TopMovies = dto.TopMovies ?? new List<string>();
     }
 }
