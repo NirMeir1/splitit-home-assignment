@@ -7,7 +7,7 @@ using SplititAssignment.Application.Actors.Queries;
 using SplititAssignment.Application.Actors.Validation;
 using SplititAssignment.Application.Common.Pagination;
 using SplititAssignment.Domain.Entities;
-using SplititAssignment.Domain.Enums; // remove if your enum is elsewhere
+using SplititAssignment.Domain.Enums;
 using SplititAssignment.Infrastructure.Persistence;
 
 namespace SplititAssignment.Api.Endpoints;
@@ -18,7 +18,6 @@ public static class ActorsEndpoints
     {
         var group = app.MapGroup("/actors").WithTags("Actors");
 
-        // GET /actors  (filters + pagination) → list items + metadata
         group.MapGet("", async (
             [FromQuery] string? name,
             [FromQuery] int? rankMin,
@@ -30,7 +29,6 @@ public static class ActorsEndpoints
             IActorRepository repo,
             CancellationToken ct) =>
         {
-            // Make all defaults explicit to avoid framework 400s on binding
             var q = new ActorQuery
             {
                 Name = name,
@@ -66,7 +64,6 @@ public static class ActorsEndpoints
             return op;
         });
 
-        // GET /actors/{id} → details
         group.MapGet("/{id:guid}", async (Guid id, IActorRepository repo, CancellationToken ct) =>
         {
             var actor = await repo.GetByIdAsync(id, ct);
@@ -82,7 +79,6 @@ public static class ActorsEndpoints
             return op;
         });
 
-        // POST /actors → create (201 + Location + full DTO)
         group.MapPost("", async ([FromBody] ActorCreateUpdateDto dto,
                                  IActorRepository repo,
                                  CancellationToken ct) =>
@@ -93,7 +89,7 @@ public static class ActorsEndpoints
             if (await repo.RankInUseAsync(dto.Rank, excludingId: null, ct))
                 return ErrorResults.Conflict("rank", "Duplicate rank");
 
-            var entity = new Actor { Source = ProviderSource.Imdb }; // default source for manual adds
+            var entity = new Actor { Source = ProviderSource.Imdb };
             entity.Apply(dto);
 
             var created = await repo.AddAsync(entity, ct);
@@ -108,7 +104,6 @@ public static class ActorsEndpoints
             return op;
         });
 
-        // PUT /actors/{id} → update (200) or 404/409
         group.MapPut("/{id:guid}", async (Guid id,
                                           [FromBody] ActorCreateUpdateDto dto,
                                           IActorRepository repo,
@@ -139,7 +134,6 @@ public static class ActorsEndpoints
             return op;
         });
 
-        // DELETE /actors/{id} → 204 or 404
         group.MapDelete("/{id:guid}", async (Guid id, IActorRepository repo, CancellationToken ct) =>
         {
             var ok = await repo.DeleteAsync(id, ct);
