@@ -48,7 +48,8 @@ public class ActorsApiTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task Post_Create_Then_GetById()
     {
-        var create = new ActorCreateUpdateDto { Name = "Charlie", Rank = 3 };
+        // Use a rank value that is unique across tests to avoid collisions
+        var create = new ActorCreateUpdateDto { Name = "Charlie", Rank = 100 };
         var res = await _client.PostAsJsonAsync("/actors", create);
         await AssertStatusAsync(res, HttpStatusCode.Created);
 
