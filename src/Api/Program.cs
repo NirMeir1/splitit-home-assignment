@@ -1,6 +1,5 @@
 using SplititAssignment.Infrastructure;
-using Microsoft.EntityFrameworkCore;
-using SplititAssignment.Infrastructure.Persistence;
+using SplititAssignment.Api.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,10 +21,6 @@ app.UseSwaggerUI(c =>
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-app.MapGet("/debug/actors", async (ActorsDbContext db) =>
-{
-    var list = await db.Actors.AsNoTracking().Select(a => new { a.Id, a.Name, a.Rank }).ToListAsync();
-    return Results.Ok(list);
-});
+app.MapActorsEndpoints();
 
 app.Run();
