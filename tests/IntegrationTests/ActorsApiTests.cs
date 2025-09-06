@@ -49,15 +49,12 @@ public class ActorsApiTests : IClassFixture<CustomWebApplicationFactory>
     public async Task Post_Create_Then_GetById()
     {
         // Use a rank value that is unique across tests to avoid collisions
-        var create = new ActorCreateUpdateDto { Name = "Charlie", Rank = 100 };
-        var res = await _client.PostAsJsonAsync("/actors", create);
+        var id = Guid.NewGuid();
+        var create = new ActorUpsertRequestDto { Name = "Charlie", Details = "", Type = "Actor", Rank = 100, Source = "Imdb" };
+        var res = await _client.PostAsJsonAsync($"/actors/{id}", create);
         await AssertStatusAsync(res, HttpStatusCode.Created);
 
-        var createdText = await res.Content.ReadAsStringAsync();
-        var created = await res.Content.ReadFromJsonAsync<ActorDetailsDto>();
-        created.Should().NotBeNull($"Raw: {createdText}");
-
-        var get = await _client.GetAsync($"/actors/{created!.Id}");
+        var get = await _client.GetAsync($"/actors/{id}");
         await AssertStatusAsync(get, HttpStatusCode.OK);
     }
 
@@ -65,14 +62,14 @@ public class ActorsApiTests : IClassFixture<CustomWebApplicationFactory>
     public async Task Put_Update_DuplicateRank_409()
     {
         // Create a new actor first (so we have an ID to update)
-        var initial = new ActorCreateUpdateDto { Name = "Zed", Rank = 3 };
-        var create = await _client.PostAsJsonAsync("/actors", initial);
+        var id = Guid.NewGuid();
+        var initial = new ActorUpsertRequestDto { Name = "Zed", Details = "", Type = "Actor", Rank = 3, Source = "Imdb" };
+        var create = await _client.PostAsJsonAsync($"/actors/{id}", initial);
         await AssertStatusAsync(create, HttpStatusCode.Created);
-        var created = await create.Content.ReadFromJsonAsync<ActorDetailsDto>();
 
         // Attempt to set duplicate rank = 1 (Alice already seeded with rank 1)
-        var update = new ActorCreateUpdateDto { Name = "Zed", Rank = 1 };
-        var put = await _client.PutAsJsonAsync($"/actors/{created!.Id}", update);
+        var update = new ActorUpsertRequestDto { Name = "Zed", Details = "", Type = "Actor", Rank = 1, Source = "Imdb" };
+        var put = await _client.PutAsJsonAsync($"/actors/{id}", update);
         await AssertStatusAsync(put, HttpStatusCode.Conflict);
     }
 
@@ -80,15 +77,15 @@ public class ActorsApiTests : IClassFixture<CustomWebApplicationFactory>
     public async Task Delete_Then_404_On_Get()
     {
         // Create a new actor then delete it
-        var create = new ActorCreateUpdateDto { Name = "Temp", Rank = 99 };
-        var res = await _client.PostAsJsonAsync("/actors", create);
+        var id = Guid.NewGuid();
+        var create = new ActorUpsertRequestDto { Name = "Temp", Details = "", Type = "Actor", Rank = 99, Source = "Imdb" };
+        var res = await _client.PostAsJsonAsync($"/actors/{id}", create);
         await AssertStatusAsync(res, HttpStatusCode.Created);
-        var created = await res.Content.ReadFromJsonAsync<ActorDetailsDto>();
 
-        var del = await _client.DeleteAsync($"/actors/{created!.Id}");
+        var del = await _client.DeleteAsync($"/actors/{id}");
         await AssertStatusAsync(del, HttpStatusCode.NoContent);
 
-        var get = await _client.GetAsync($"/actors/{created.Id}");
+        var get = await _client.GetAsync($"/actors/{id}");
         await AssertStatusAsync(get, HttpStatusCode.NotFound);
     }
 

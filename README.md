@@ -1,6 +1,6 @@
 # SplititAssignment – Actors API
 
-A minimal Actors API with filtering, sorting, pagination, and a unique-rank constraint. Includes unit and integration tests over Entity Framework Core In‑Memory.
+A minimal Actors API with filtering, pagination, and a unique-rank constraint. Includes unit and integration tests over Entity Framework Core In‑Memory.
 
 ## Tech
 
@@ -62,7 +62,7 @@ Notes:
 - Base: `/actors`
 - Filters: `name`, `rankMin`, `rankMax`
 - Paging: `page` (>=1, default 1), `pageSize` (1..100, default 20)
-- Sorting: `sortBy` = `rank|name` (default `rank`), `sortDir` = `asc|desc` (default `asc`)
+ 
 
 Endpoints:
 - `GET /actors`: Returns paged list of items `{ id, name }` with metadata `{ page, pageSize, total }`.

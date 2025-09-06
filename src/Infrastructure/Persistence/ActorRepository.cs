@@ -46,10 +46,6 @@ public sealed class ActorRepository : IActorRepository
 
         existing.Name = actor.Name;
         existing.Rank = actor.Rank;
-        existing.ImageUrl = actor.ImageUrl;
-        existing.KnownFor = actor.KnownFor;
-        existing.PrimaryProfession = actor.PrimaryProfession;
-        existing.TopMovies = actor.TopMovies;
         existing.Source = actor.Source;
         existing.ExternalId = actor.ExternalId;
 
@@ -86,17 +82,8 @@ public sealed class ActorRepository : IActorRepository
         if (q.RankMax is not null)
             query = query.Where(a => a.Rank <= q.RankMax);
 
-        // Sorting
-        var sortBy = q.SortBy.ToLowerInvariant();
-        var asc = q.SortDir.Equals("asc", StringComparison.OrdinalIgnoreCase);
-
-        query = (sortBy, asc) switch
-        {
-            ("name", true)  => query.OrderBy(a => a.Name),
-            ("name", false) => query.OrderByDescending(a => a.Name),
-            ("rank", false) => query.OrderByDescending(a => a.Rank),
-            _               => query.OrderBy(a => a.Rank) // default rank asc
-        };
+        // Default ordering for stable pagination (by rank ascending)
+        query = query.OrderBy(a => a.Rank);
 
         var total = await query.CountAsync(ct);
 

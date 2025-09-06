@@ -2,13 +2,11 @@ namespace SplititAssignment.Api.Errors;
 
 public static class ErrorResults
 {
-    public static IResult Validation(object details, string? message = null)
-        => Results.Json(new
-        {
-            code = "validation_error",
-            message = message ?? "One or more validation errors occurred.",
-            details
-        }, statusCode: StatusCodes.Status400BadRequest);
+    public static IResult Validation(Dictionary<string, List<string>> details, string? message = null)
+        => Results.ValidationProblem(details.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToArray()), title: message ?? "One or more validation errors occurred.");
+
+    public static IResult Validation(Dictionary<string, string[]> details, string? message = null)
+        => Results.ValidationProblem(details, title: message ?? "One or more validation errors occurred.");
 
     public static IResult NotFound(string? message = null)
         => Results.Json(new
@@ -18,13 +16,5 @@ public static class ErrorResults
         }, statusCode: StatusCodes.Status404NotFound);
 
     public static IResult Conflict(string field, string error, string? message = null)
-        => Results.Json(new
-        {
-            code = "conflict",
-            message = message ?? "Conflict.",
-            details = new Dictionary<string, string[]>
-            {
-                [field] = new[] { error }
-            }
-        }, statusCode: StatusCodes.Status409Conflict);
+        => Results.Problem(title: message ?? "Conflict.", detail: $"{field} {error}", statusCode: StatusCodes.Status409Conflict);
 }

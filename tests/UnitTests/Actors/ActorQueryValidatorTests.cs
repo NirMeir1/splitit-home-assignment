@@ -7,12 +7,12 @@ namespace SplititAssignment.UnitTests.Actors;
 public class ActorQueryValidatorTests
 {
     [Fact]
-    public void Invalid_PageAndSize_AndSorts()
+    public void Invalid_PageAndSize()
     {
-        var q = new ActorQuery { Page = 0, PageSize = 101, SortBy = "bad", SortDir = "down" };
+        var q = new ActorQuery { Page = 0, PageSize = 101 };
         var vr = ActorQueryValidator.Validate(q);
         vr.IsValid.Should().BeFalse();
-        vr.Errors.Keys.Should().Contain(new[] { "page", "pageSize", "sortBy", "sortDir" });
+        vr.Errors.Keys.Should().Contain(new[] { "page", "pageSize" });
     }
 
     [Fact]

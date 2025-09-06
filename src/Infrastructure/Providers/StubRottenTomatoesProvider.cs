@@ -14,7 +14,6 @@ public sealed class StubRottenTomatoesProvider : IActorProvider
             {
                 Name = "Sample Actor A",
                 Rank = 1001,
-                KnownFor = "Sample Film A",
                 Source = ProviderSource.RottenTomatoes,
                 ExternalId = "rt-sample-a"
             },
@@ -22,7 +21,6 @@ public sealed class StubRottenTomatoesProvider : IActorProvider
             {
                 Name = "Sample Actor B",
                 Rank = 1002,
-                KnownFor = "Sample Film B",
                 Source = ProviderSource.RottenTomatoes,
                 ExternalId = "rt-sample-b"
             }
