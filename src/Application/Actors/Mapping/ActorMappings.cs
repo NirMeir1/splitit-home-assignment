@@ -13,13 +13,10 @@ public static class ActorMapping
         {
             Id = a.Id,
             Name = a.Name,
+            Details = !string.IsNullOrWhiteSpace(a.KnownFor) ? a.KnownFor! : (a.PrimaryProfession ?? string.Empty),
+            Type = "Actor",
             Rank = a.Rank,
-            ImageUrl = a.ImageUrl,
-            KnownFor = a.KnownFor,
-            PrimaryProfession = a.PrimaryProfession,
-            TopMovies = (a.TopMovies ?? new List<string>()).ToList(), // IReadOnlyList ok
-            Source = a.Source.ToString(), // enum -> string
-            ExternalId = a.ExternalId
+            Source = a.Source.ToString() // enum -> string
         };
 
     public static void Apply(this Actor target, ActorCreateUpdateDto dto)

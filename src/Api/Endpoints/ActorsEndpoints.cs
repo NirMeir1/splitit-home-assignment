@@ -1,5 +1,6 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Any;
 using SplititAssignment.Api.Errors;
 using SplititAssignment.Application.Actors.Dtos;
 using SplititAssignment.Application.Actors.Mapping;
@@ -52,25 +53,55 @@ public static class ActorsEndpoints
                 new() { Name = "name", In = ParameterLocation.Query, Description = "Filter by name (contains)" },
                 new() { Name = "rankMin", In = ParameterLocation.Query, Description = "Min rank (inclusive)" },
                 new() { Name = "rankMax", In = ParameterLocation.Query, Description = "Max rank (inclusive)" },
-                new() { Name = "page", In = ParameterLocation.Query, Description = "Page (≥1, default 1)" },
+                new() { Name = "page", In = ParameterLocation.Query, Description = "Page (>=1, default 1)" },
                 new() { Name = "pageSize", In = ParameterLocation.Query, Description = "Items per page (1..100, default 20)" },
                 
             };
             return op;
         });
 
-        group.MapGet("/{id:guid}", async (Guid id, IActorRepository repo, CancellationToken ct) =>
+        group.MapGet("/{id:guid}", async (Guid id, IActorRepository repo, HttpContext http, CancellationToken ct) =>
         {
             var actor = await repo.GetByIdAsync(id, ct);
-            return actor is null
-                ? ErrorResults.NotFound("Actor not found.")
-                : Results.Ok(actor.ToDetailsDto());
+            if (actor is null) return ErrorResults.NotFound("Actor not found.");
+
+            var dto = actor.ToDetailsDto();
+            var envelope = new SplititAssignment.Api.Contracts.ActorGetResponse
+            {
+                Actor = dto,
+                Errors = null,
+                StatusCode = StatusCodes.Status200OK,
+                TraceId = http.TraceIdentifier,
+                IsSuccess = true
+            };
+            return Results.Ok(envelope);
         })
-        .Produces<ActorDetailsDto>(StatusCodes.Status200OK)
+        .Produces<SplititAssignment.Api.Contracts.ActorGetResponse>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status404NotFound)
         .WithOpenApi(op =>
         {
             op.Summary = "Get actor by id";
+            // Example response
+            var example = new OpenApiObject
+            {
+                ["Actor"] = new OpenApiObject
+                {
+                    ["Id"] = new OpenApiString("00000000-0000-0000-0000-000000000000"),
+                    ["Name"] = new OpenApiString("Alice Actor"),
+                    ["Details"] = new OpenApiString("Known for Example Work"),
+                    ["Type"] = new OpenApiString("Actor"),
+                    ["Rank"] = new OpenApiInteger(1),
+                    ["Source"] = new OpenApiString("Imdb")
+                },
+                ["Errors"] = new OpenApiNull(),
+                ["StatusCode"] = new OpenApiInteger(200),
+                ["TraceId"] = new OpenApiString("00-abc123..."),
+                ["IsSuccess"] = new OpenApiBoolean(true)
+            };
+            if (op.Responses.TryGetValue("200", out var r) && r.Content.TryGetValue("application/json", out var c))
+            {
+                c.Example = example;
+            }
             return op;
         });
 
