@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using HtmlAgilityPack;
 using SplititAssignment.Domain.Abstractions;
@@ -28,8 +29,8 @@ public sealed class ImdbTopActorsProvider : IActorProvider
         doc.LoadHtml(html);
 
         var items = doc.DocumentNode
-            .SelectNodes("//div[contains(@class,'lister-item')]")
-            ?? doc.DocumentNode.SelectNodes("//li[contains(@class,'ipc-metadata-list-summary-item')]")
+            .SelectNodes("//li[contains(@class,'ipc-metadata-list-summary-item')]")
+            ?? doc.DocumentNode.SelectNodes("//div[contains(@class,'lister-item')]")
             ?? new HtmlNodeCollection(null);
 
         var results = new List<Actor>(capacity: items.Count);
@@ -63,19 +64,35 @@ public sealed class ImdbTopActorsProvider : IActorProvider
 
     private static int? TryParseRank(HtmlNode node)
     {
-        var text = node.SelectSingleNode(".//span[contains(@class,'lister-item-index')]")?.InnerText
-                ?? node.SelectSingleNode(".//div[contains(@class,'ipc-title__text')]")?.InnerText;
-        if (string.IsNullOrWhiteSpace(text)) return null;
+        // Prefer the reduced/new title class
+        var h3 = node.SelectSingleNode(".//h3[contains(@class,'ipc-title__text')]");
+        if (h3 == null) return null;
+
+        var text = WebUtility.HtmlDecode(h3.InnerText ?? string.Empty).Trim();
+        // Extract leading digits "1." → "1"
         var digits = new string(text.TakeWhile(char.IsDigit).ToArray());
         return int.TryParse(digits, out var r) ? r : null;
     }
 
     private static string? TryGetName(HtmlNode node)
     {
-        var a = node.SelectSingleNode(".//h3//a")
-             ?? node.SelectSingleNode(".//a[contains(@href,'/name/nm')]");
-        return a?.InnerText?.Trim();
+        // Best: anchor with person href
+        var h3FromAnchor = node.SelectSingleNode(".//a[contains(@href,'/name/nm')]/h3");
+        var raw = h3FromAnchor?.InnerText 
+                ?? node.SelectSingleNode(".//h3[contains(@class,'ipc-title__text')]")?.InnerText;
+
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+
+        var decoded = WebUtility.HtmlDecode(raw).Trim();
+
+        // Remove leading digits and dot "1. " → "Charles Chaplin"
+        var name = System.Text.RegularExpressions.Regex.Replace(decoded, @"^\d+\.\s*", "");
+
+        return name;
     }
+
+
 
     private static string? TryGetExternalId(HtmlNode node)
     {
