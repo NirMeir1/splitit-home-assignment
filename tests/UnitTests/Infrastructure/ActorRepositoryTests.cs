@@ -17,7 +17,7 @@ public class ActorRepositoryTests
     }
 
     [Fact]
-    public async Task Query_PaginatesAndSorts()
+    public async Task Query_Paginates_DefaultOrder()
     {
         using var db = NewDb();
         db.Actors.AddRange(
@@ -28,7 +28,7 @@ public class ActorRepositoryTests
         await db.SaveChangesAsync();
 
         var repo = new ActorRepository(db);
-        var q = new ActorQuery { Page = 1, PageSize = 2, SortBy = "name", SortDir = "asc" };
+        var q = new ActorQuery { Page = 1, PageSize = 2 };
 
         var page = await repo.QueryAsync(q, CancellationToken.None);
         page.Total.Should().Be(3);

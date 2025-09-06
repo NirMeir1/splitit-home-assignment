@@ -12,13 +12,7 @@ public static class ActorQueryValidator
         if (q.Page < 1) vr.Add("page", "Page must be ≥ 1.");
         if (q.PageSize < 1 || q.PageSize > 100) vr.Add("pageSize", "PageSize must be between 1 and 100.");
 
-        if (!string.Equals(q.SortBy, "rank", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(q.SortBy, "name", StringComparison.OrdinalIgnoreCase))
-            vr.Add("sortBy", "SortBy must be 'rank' or 'name'.");
-
-        if (!string.Equals(q.SortDir, "asc", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(q.SortDir, "desc", StringComparison.OrdinalIgnoreCase))
-            vr.Add("sortDir", "SortDir must be 'asc' or 'desc'.");
+        
 
         if (q.RankMin is not null && q.RankMax is not null && q.RankMin > q.RankMax)
             vr.Add("rank", "rankMin must be ≤ rankMax.");

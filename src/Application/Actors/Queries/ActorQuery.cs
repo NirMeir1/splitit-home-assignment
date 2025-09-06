@@ -7,6 +7,4 @@ public sealed class ActorQuery
     public int? RankMax { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
-    public string SortBy { get; set; } = "rank";  // rank | name
-    public string SortDir { get; set; } = "asc";  // asc | desc
 }

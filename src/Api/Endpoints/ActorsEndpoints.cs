@@ -24,8 +24,6 @@ public static class ActorsEndpoints
             [FromQuery] int? rankMax,
             [FromQuery] int? page,
             [FromQuery] int? pageSize,
-            [FromQuery] string? sortBy,
-            [FromQuery] string? sortDir,
             IActorRepository repo,
             CancellationToken ct) =>
         {
@@ -35,9 +33,7 @@ public static class ActorsEndpoints
                 RankMin = rankMin,
                 RankMax = rankMax,
                 Page = page.GetValueOrDefault(1),
-                PageSize = pageSize.GetValueOrDefault(20),
-                SortBy = string.IsNullOrWhiteSpace(sortBy) ? "rank" : sortBy,
-                SortDir = string.IsNullOrWhiteSpace(sortDir) ? "asc" : sortDir
+                PageSize = pageSize.GetValueOrDefault(20)
             };
 
             var vr = ActorQueryValidator.Validate(q);
@@ -50,7 +46,7 @@ public static class ActorsEndpoints
         .Produces(StatusCodes.Status400BadRequest)
         .WithOpenApi(op =>
         {
-            op.Summary = "List actors (filters, sorting, pagination)";
+            op.Summary = "List actors (filters, pagination)";
             op.Parameters = new List<OpenApiParameter>
             {
                 new() { Name = "name", In = ParameterLocation.Query, Description = "Filter by name (contains)" },
@@ -58,8 +54,7 @@ public static class ActorsEndpoints
                 new() { Name = "rankMax", In = ParameterLocation.Query, Description = "Max rank (inclusive)" },
                 new() { Name = "page", In = ParameterLocation.Query, Description = "Page (≥1, default 1)" },
                 new() { Name = "pageSize", In = ParameterLocation.Query, Description = "Items per page (1..100, default 20)" },
-                new() { Name = "sortBy", In = ParameterLocation.Query, Description = "rank|name (default rank)" },
-                new() { Name = "sortDir", In = ParameterLocation.Query, Description = "asc|desc (default asc)" },
+                
             };
             return op;
         });
