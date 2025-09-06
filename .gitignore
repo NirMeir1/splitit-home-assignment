@@ -4,6 +4,10 @@ obj/
 out/
 artifacts/
 
+# VS
+.vs/
+**/Properties/launchSettings.json
+
 # User-specific files
 *.user
 *.rsuser

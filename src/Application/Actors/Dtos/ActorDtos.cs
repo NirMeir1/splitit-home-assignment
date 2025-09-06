@@ -11,7 +11,7 @@ public sealed class ActorDetailsDto
     public string? KnownFor { get; init; }
     public string? PrimaryProfession { get; init; }
     public IReadOnlyList<string> TopMovies { get; init; } = Array.Empty<string>();
-    public string Source { get; init; } = "Imdb";
+    public string Source { get; init; } = "Imdb"; // string representation of enum
     public string? ExternalId { get; init; }
 }
 

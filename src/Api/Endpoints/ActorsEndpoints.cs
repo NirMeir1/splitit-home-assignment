@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi.Models;
 using SplititAssignment.Api.Errors;
 using SplititAssignment.Application.Actors.Dtos;
 using SplititAssignment.Application.Actors.Mapping;
@@ -17,43 +18,52 @@ public static class ActorsEndpoints
     {
         var group = app.MapGroup("/actors").WithTags("Actors");
 
-        // GET /actors  (filters + pagination) → list items + metadata
-        group.MapGet("/", async (
-            [AsParameters] ActorQuery query,
+        group.MapGet("", async (
+            [FromQuery] string? name,
+            [FromQuery] int? rankMin,
+            [FromQuery] int? rankMax,
+            [FromQuery] int? page,
+            [FromQuery] int? pageSize,
+            [FromQuery] string? sortBy,
+            [FromQuery] string? sortDir,
             IActorRepository repo,
             CancellationToken ct) =>
         {
-            var vr = ActorQueryValidator.Validate(query);
+            var q = new ActorQuery
+            {
+                Name = name,
+                RankMin = rankMin,
+                RankMax = rankMax,
+                Page = page.GetValueOrDefault(1),
+                PageSize = pageSize.GetValueOrDefault(20),
+                SortBy = string.IsNullOrWhiteSpace(sortBy) ? "rank" : sortBy,
+                SortDir = string.IsNullOrWhiteSpace(sortDir) ? "asc" : sortDir
+            };
+
+            var vr = ActorQueryValidator.Validate(q);
             if (!vr.IsValid) return ErrorResults.Validation(vr.Errors);
 
-            var page = await repo.QueryAsync(query, ct);
-            return Results.Ok(new PagedResult<ActorListItemDto>
-            {
-                Items = page.Items,
-                Page = page.Page,
-                PageSize = page.PageSize,
-                Total = page.Total
-            });
+            var pageResult = await repo.QueryAsync(q, ct);
+            return Results.Ok(pageResult);
         })
         .Produces<PagedResult<ActorListItemDto>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status400BadRequest)
         .WithOpenApi(op =>
         {
             op.Summary = "List actors (filters, sorting, pagination)";
-            op.Parameters = new List<Microsoft.OpenApi.Models.OpenApiParameter>
+            op.Parameters = new List<OpenApiParameter>
             {
-                new() { Name = "name", In = Microsoft.OpenApi.Models.ParameterLocation.Query, Description = "Filter by name (contains)" },
-                new() { Name = "rankMin", In = Microsoft.OpenApi.Models.ParameterLocation.Query, Description = "Min rank (inclusive)" },
-                new() { Name = "rankMax", In = Microsoft.OpenApi.Models.ParameterLocation.Query, Description = "Max rank (inclusive)" },
-                new() { Name = "page", In = Microsoft.OpenApi.Models.ParameterLocation.Query, Description = "Page (≥1, default 1)" },
-                new() { Name = "pageSize", In = Microsoft.OpenApi.Models.ParameterLocation.Query, Description = "Items per page (1..100, default 20)" },
-                new() { Name = "sortBy", In = Microsoft.OpenApi.Models.ParameterLocation.Query, Description = "rank|name (default rank)" },
-                new() { Name = "sortDir", In = Microsoft.OpenApi.Models.ParameterLocation.Query, Description = "asc|desc (default asc)" },
+                new() { Name = "name", In = ParameterLocation.Query, Description = "Filter by name (contains)" },
+                new() { Name = "rankMin", In = ParameterLocation.Query, Description = "Min rank (inclusive)" },
+                new() { Name = "rankMax", In = ParameterLocation.Query, Description = "Max rank (inclusive)" },
+                new() { Name = "page", In = ParameterLocation.Query, Description = "Page (≥1, default 1)" },
+                new() { Name = "pageSize", In = ParameterLocation.Query, Description = "Items per page (1..100, default 20)" },
+                new() { Name = "sortBy", In = ParameterLocation.Query, Description = "rank|name (default rank)" },
+                new() { Name = "sortDir", In = ParameterLocation.Query, Description = "asc|desc (default asc)" },
             };
             return op;
         });
 
-        // GET /actors/{id} → details
         group.MapGet("/{id:guid}", async (Guid id, IActorRepository repo, CancellationToken ct) =>
         {
             var actor = await repo.GetByIdAsync(id, ct);
@@ -69,10 +79,9 @@ public static class ActorsEndpoints
             return op;
         });
 
-        // POST /actors → create (201 + Location + full DTO)
-        group.MapPost("/", async ([FromBody] ActorCreateUpdateDto dto,
-                                  IActorRepository repo,
-                                  CancellationToken ct) =>
+        group.MapPost("", async ([FromBody] ActorCreateUpdateDto dto,
+                                 IActorRepository repo,
+                                 CancellationToken ct) =>
         {
             var vr = ActorCreateUpdateValidator.Validate(dto.Name, dto.Rank, dto.TopMovies);
             if (!vr.IsValid) return ErrorResults.Validation(vr.Errors);
@@ -80,11 +89,10 @@ public static class ActorsEndpoints
             if (await repo.RankInUseAsync(dto.Rank, excludingId: null, ct))
                 return ErrorResults.Conflict("rank", "Duplicate rank");
 
-            var entity = new Actor { Source = ProviderSource.Imdb }; // default source for manual adds
+            var entity = new Actor { Source = ProviderSource.Imdb };
             entity.Apply(dto);
 
             var created = await repo.AddAsync(entity, ct);
-
             return Results.Created($"/actors/{created.Id}", created.ToDetailsDto());
         })
         .Produces<ActorDetailsDto>(StatusCodes.Status201Created)
@@ -96,7 +104,6 @@ public static class ActorsEndpoints
             return op;
         });
 
-        // PUT /actors/{id} → update (200) or 404/409
         group.MapPut("/{id:guid}", async (Guid id,
                                           [FromBody] ActorCreateUpdateDto dto,
                                           IActorRepository repo,
@@ -127,7 +134,6 @@ public static class ActorsEndpoints
             return op;
         });
 
-        // DELETE /actors/{id} → 204 or 404
         group.MapDelete("/{id:guid}", async (Guid id, IActorRepository repo, CancellationToken ct) =>
         {
             var ok = await repo.DeleteAsync(id, ct);
