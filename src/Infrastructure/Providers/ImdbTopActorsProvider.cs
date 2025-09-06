@@ -47,10 +47,6 @@ public sealed class ImdbTopActorsProvider : IActorProvider
             {
                 Name = name.Trim(),
                 Rank = rank,
-                ImageUrl = TryGetImageUrl(node),
-                KnownFor = TryGetKnownFor(node),
-                PrimaryProfession = null,
-                TopMovies = new List<string>(),
                 Source = ProviderSource.Imdb,
                 ExternalId = TryGetExternalId(node)
             });
@@ -81,13 +77,6 @@ public sealed class ImdbTopActorsProvider : IActorProvider
         return a?.InnerText?.Trim();
     }
 
-    private static string? TryGetImageUrl(HtmlNode node)
-    {
-        var img = node.SelectSingleNode(".//img[@src]") ?? node.SelectSingleNode(".//img[@loadlate]");
-        var url = img?.GetAttributeValue("src", null) ?? img?.GetAttributeValue("loadlate", null);
-        return string.IsNullOrWhiteSpace(url) ? null : url;
-    }
-
     private static string? TryGetExternalId(HtmlNode node)
     {
         var href = node.SelectSingleNode(".//a[contains(@href,'/name/nm')]")?.GetAttributeValue("href", null);
@@ -96,9 +85,5 @@ public sealed class ImdbTopActorsProvider : IActorProvider
         return parts.FirstOrDefault(p => p.StartsWith("nm", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static string? TryGetKnownFor(HtmlNode node)
-    {
-        var sub = node.SelectSingleNode(".//*[contains(@class,'text-small')]");
-        return sub?.InnerText?.Trim();
-    }
+    
 }

@@ -46,10 +46,6 @@ public sealed class ActorRepository : IActorRepository
 
         existing.Name = actor.Name;
         existing.Rank = actor.Rank;
-        existing.ImageUrl = actor.ImageUrl;
-        existing.KnownFor = actor.KnownFor;
-        existing.PrimaryProfession = actor.PrimaryProfession;
-        existing.TopMovies = actor.TopMovies;
         existing.Source = actor.Source;
         existing.ExternalId = actor.ExternalId;
 

@@ -8,7 +8,7 @@ public class ActorCreateUpdateValidatorTests
     [Fact]
     public void Invalid_WhenNameMissing_OrRankNotPositive()
     {
-        var vr = ActorCreateUpdateValidator.Validate("", 0, null);
+        var vr = ActorCreateUpdateValidator.Validate("", details: "", type: "Actor", rank: -1, source: "Imdb");
         vr.IsValid.Should().BeFalse();
         vr.Errors.Should().ContainKey("name");
         vr.Errors.Should().ContainKey("rank");
@@ -17,15 +17,16 @@ public class ActorCreateUpdateValidatorTests
     [Fact]
     public void Valid_WithTrimmedName_AndPositiveRank()
     {
-        var vr = ActorCreateUpdateValidator.Validate("  Tom Hanks  ", 1, new() { "A", "B" });
+        var vr = ActorCreateUpdateValidator.Validate("  Tom Hanks  ", details: "", type: "Actor", rank: 1, source: "Imdb");
         vr.IsValid.Should().BeTrue();
     }
 
     [Fact]
-    public void Invalid_WhenTopMoviesContainsEmpty()
+    public void Invalid_WhenTypeOrSourceMissing()
     {
-        var vr = ActorCreateUpdateValidator.Validate("A", 1, new() { "X", " " });
+        var vr = ActorCreateUpdateValidator.Validate("A", details: null, type: "", rank: 1, source: "");
         vr.IsValid.Should().BeFalse();
-        vr.Errors.Should().ContainKey("topMovies");
+        vr.Errors.Should().ContainKey("type");
+        vr.Errors.Should().ContainKey("source");
     }
 }

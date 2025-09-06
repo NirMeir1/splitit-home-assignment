@@ -5,19 +5,18 @@ namespace SplititAssignment.Api.Contracts;
 
 public sealed class ActorGetResponse
 {
-    [JsonPropertyName("Actor")]
+    [JsonPropertyName("actor")]
     public required ActorDetailsDto Actor { get; init; }
 
-    [JsonPropertyName("Errors")]
+    [JsonPropertyName("errors")]
     public object? Errors { get; init; } = null;
 
-    [JsonPropertyName("StatusCode")]
+    [JsonPropertyName("statusCode")]
     public int StatusCode { get; init; }
 
-    [JsonPropertyName("TraceId")]
+    [JsonPropertyName("traceId")]
     public string TraceId { get; init; } = string.Empty;
 
-    [JsonPropertyName("IsSuccess")]
+    [JsonPropertyName("isSuccess")]
     public bool IsSuccess { get; init; }
 }
-

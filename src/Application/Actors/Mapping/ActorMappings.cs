@@ -13,19 +13,15 @@ public static class ActorMapping
         {
             Id = a.Id,
             Name = a.Name,
-            Details = !string.IsNullOrWhiteSpace(a.KnownFor) ? a.KnownFor! : (a.PrimaryProfession ?? string.Empty),
+            Details = string.Empty,
             Type = "Actor",
             Rank = a.Rank,
             Source = a.Source.ToString() // enum -> string
         };
 
-    public static void Apply(this Actor target, ActorCreateUpdateDto dto)
+    public static void Apply(this Actor target, ActorUpsertRequestDto dto)
     {
         target.Name = dto.Name.Trim();
         target.Rank = dto.Rank;
-        target.ImageUrl = dto.ImageUrl;
-        target.KnownFor = dto.KnownFor;
-        target.PrimaryProfession = dto.PrimaryProfession;
-        target.TopMovies = dto.TopMovies ?? new List<string>();
     }
 }
