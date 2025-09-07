@@ -155,11 +155,15 @@ tests/
 
 ### Notes on Actor Collection
 
-Target: [IMDb list](https://www.imdb.com/list/ls054840033/)
+Target: IMDb list
 
-- Used `HttpClient` + **HtmlAgilityPack** → consistently only the first 25 actors.
-- Tried pagination params (`?start=26`, `?page=2`, etc.) → duplicates or still 25 items.
-- Explored `/export` CSV earlier → inconsistent; **removed from the project**.
-- I **tested** a headless **Playwright** approach and it **did** fetch all 60 actors, but I **did not deliver Playwright** because it wasn’t part of the requirements.
+I now have the final solution working — all 60 actors are collected successfully 
+I used HttpClient + HtmlAgilityPack as required. At first I only got 25 actors:
 
-Current delivery uses only `HttpClient` + HtmlAgilityPack, per requirements.
+Tried pagination (?start=26, ?page=2, etc.) → just duplicates.
+
+Tried the /export CSV → inconsistent.
+
+Tested Playwright (it worked, but not in scope, so I didn’t deliver it).
+
+After submission, with just a couple of small tweaks (nothing heavy), I switched to parsing the embedded JSON-LD script inside the HTML (extracted via HtmlAgilityPack + parsed with Newtonsoft.Json) and added a small fallback scraper for missing bios. This still uses only HttpClient + HtmlAgilityPack, and now reliably fetches all 60 actors without needing Playwright, Selenium, or CSV workarounds.
