@@ -153,9 +153,13 @@ tests/
 
 ---
 
-## Troubleshooting
+### Notes on Actor Collection
 
-- Change `--urls` if the port is in use.
-- Ensure `ASPNETCORE_ENVIRONMENT=Development` to view Swagger.
-- For flaky tests, verify the test factory uses a single in‑memory DB name and removes the hosted seeder (already configured here).
+Target: [IMDb list](https://www.imdb.com/list/ls054840033/)
 
+- Used `HttpClient` + **HtmlAgilityPack** → consistently only the first 25 actors.
+- Tried pagination params (`?start=26`, `?page=2`, etc.) → duplicates or still 25 items.
+- Explored `/export` CSV earlier → inconsistent; **removed from the project**.
+- I **tested** a headless **Playwright** approach and it **did** fetch all 60 actors, but I **did not deliver Playwright** because it wasn’t part of the requirements.
+
+Current delivery uses only `HttpClient` + HtmlAgilityPack, per requirements.
