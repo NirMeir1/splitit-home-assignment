@@ -91,7 +91,6 @@ public static class ActorsEndpoints
             {
                 new() { Name = "id", In = ParameterLocation.Path, Required = true, Description = "Actor id (string GUID)" }
             };
-            // Example response
             var example = new OpenApiObject
             {
                 ["actor"] = new OpenApiObject
@@ -140,8 +139,7 @@ public static class ActorsEndpoints
                 });
 
             var entity = new Actor { Id = actorId, Source = sourceEnum };
-            entity.Name = dto.Name.Trim();
-            entity.Rank = dto.Rank;
+            entity.Apply(dto);
 
             var created = await repo.AddAsync(entity, ct);
             var location = $"/actors/{created.Id}";
@@ -210,7 +208,7 @@ public static class ActorsEndpoints
                     ["source"] = new[] { "Invalid source value." }
                 });
 
-            var updated = new Actor { Id = actorId, Source = sourceEnum, ExternalId = existing.ExternalId };
+            var updated = new Actor { Id = actorId, Source = sourceEnum };
             updated.Apply(dto);
 
             var saved = await repo.UpdateAsync(updated, ct);

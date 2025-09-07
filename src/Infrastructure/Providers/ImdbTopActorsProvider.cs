@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using SplititAssignment.Domain.Abstractions;
 using SplititAssignment.Domain.Entities;
@@ -46,13 +47,13 @@ public sealed class ImdbTopActorsProvider : IActorProvider
             results.Add(new Actor
             {
                 Name = name.Trim(),
+                Details = TryGetDetails(node),
+                Type = "Actor",
                 Rank = rank,
-                Source = ProviderSource.Imdb,
-                ExternalId = TryGetExternalId(node)
+                Source = ProviderSource.Imdb
             });
         }
 
-        // Normalize ranks sequentially (defensive)
         results = results
             .OrderBy(a => a.Rank)
             .Select((a, i) => { a.Rank = i + 1; return a; })
@@ -72,18 +73,47 @@ public sealed class ImdbTopActorsProvider : IActorProvider
 
     private static string? TryGetName(HtmlNode node)
     {
-        var a = node.SelectSingleNode(".//h3//a")
-             ?? node.SelectSingleNode(".//a[contains(@href,'/name/nm')]");
-        return a?.InnerText?.Trim();
+        // 1) New IMDb layout: <h3 class="ipc-title__text ipc-title__text--reduced">
+        var h3 = node.SelectSingleNode(".//h3[contains(@class,'ipc-title__text')]");
+        
+        // 2) Fallback: <div class="ipc-title"> ... <a><h3>NAME</h3></a>
+        h3 ??= node.SelectSingleNode(".//div[contains(@class,'ipc-title')]//a//h3");
+        
+        // 3) Legacy list layout: <h3><a>NAME</a></h3>
+        h3 ??= node.SelectSingleNode(".//h3//a");
+        
+        // 4) Last resort: any anchor linking to /name/nm... (use text)
+        var textNode = h3 ?? node.SelectSingleNode(".//a[contains(@href,'/name/nm')]");
+
+        var raw = textNode?.InnerText;
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+
+        // Normalize: HTML-decode, collapse whitespace, strip any leading rank like "1. "
+        var decoded = HtmlEntity.DeEntitize(raw);
+        decoded = Regex.Replace(decoded, @"\s+", " ").Trim();
+        decoded = Regex.Replace(decoded, @"^\d+\s*[\.\)]\s*", ""); 
+
+        return string.IsNullOrWhiteSpace(decoded) ? null : decoded;
     }
 
-    private static string? TryGetExternalId(HtmlNode node)
+    private static string? TryGetDetails(HtmlNode itemNode)
     {
-        var href = node.SelectSingleNode(".//a[contains(@href,'/name/nm')]")?.GetAttributeValue("href", null);
-        if (string.IsNullOrWhiteSpace(href)) return null;
-        var parts = href.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        return parts.FirstOrDefault(p => p.StartsWith("nm", StringComparison.OrdinalIgnoreCase));
+        var candidate = itemNode.SelectSingleNode(".//*[@data-testid='dli-bio']")
+            ?? itemNode.SelectSingleNode(".//div[contains(@class,'ipc-html-content-inner-div')]")
+            ?? itemNode.SelectSingleNode(".//div[contains(@class,'ipc-html-content')]");
+
+        var raw = candidate?.InnerText;
+        return CleanText(raw);
     }
 
+    private static string? CleanText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+
+        var decoded = HtmlEntity.DeEntitize(text);
+        decoded = Regex.Replace(decoded, @"\s+", " ").Trim();
+
+        return string.IsNullOrWhiteSpace(decoded) ? null : decoded;
+    }
     
 }

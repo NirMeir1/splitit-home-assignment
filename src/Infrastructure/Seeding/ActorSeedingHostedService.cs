@@ -52,7 +52,6 @@ public sealed class ActorSeedingHostedService : IHostedService
             }
         }
 
-        // Normalize ranks sequentially & ensure uniqueness
         combined = combined
             .OrderBy(a => a.Rank)
             .Select((a, i) => { a.Rank = i + 1; return a; })

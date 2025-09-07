@@ -3,11 +3,9 @@ using SplititAssignment.Api.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Swagger (OpenAPI)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Infrastructure (DbContext, repo, providers, seeding)
 builder.Services.AddInfrastructure();
 
 var app = builder.Build();

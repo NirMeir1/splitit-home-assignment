@@ -45,10 +45,8 @@ public class ImdbTopActorsProviderTests
         list.Should().HaveCount(2);
         list[0].Name.Should().Be("Tom Hanks");
         list[0].Rank.Should().Be(1);
-        list[0].ExternalId.Should().Be("nm0000158");
 
         list[1].Name.Should().Be("Leonardo DiCaprio");
         list[1].Rank.Should().Be(2);
-        list[1].ExternalId.Should().Be("nm0000138");
     }
 }

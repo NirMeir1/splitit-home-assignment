@@ -22,7 +22,7 @@ public sealed class ActorDetailsDto
     public int Rank { get; init; }
 
     [JsonPropertyName("source")]
-    public string Source { get; init; } = "Imdb"; // enum string
+    public string Source { get; init; } = "Imdb";
 }
 
 public sealed class ActorUpsertRequestDto

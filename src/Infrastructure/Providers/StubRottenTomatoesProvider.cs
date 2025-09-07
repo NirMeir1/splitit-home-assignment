@@ -14,15 +14,13 @@ public sealed class StubRottenTomatoesProvider : IActorProvider
             {
                 Name = "Sample Actor A",
                 Rank = 1001,
-                Source = ProviderSource.RottenTomatoes,
-                ExternalId = "rt-sample-a"
+                Source = ProviderSource.RottenTomatoes
             },
             new()
             {
                 Name = "Sample Actor B",
                 Rank = 1002,
-                Source = ProviderSource.RottenTomatoes,
-                ExternalId = "rt-sample-b"
+                Source = ProviderSource.RottenTomatoes
             }
         };
         return Task.FromResult(list);
