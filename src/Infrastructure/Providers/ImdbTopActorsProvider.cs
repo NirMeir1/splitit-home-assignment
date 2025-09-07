@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
+using Newtonsoft.Json.Linq; 
 using SplititAssignment.Domain.Abstractions;
 using SplititAssignment.Domain.Entities;
 using SplititAssignment.Domain.Enums;
@@ -11,6 +12,9 @@ public sealed class ImdbTopActorsProvider : IActorProvider
 {
     private readonly HttpClient _http;
     private const string ListUrl = "https://www.imdb.com/list/ls054840033/";
+    private static readonly Dictionary<string, string> _bioCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly SemaphoreSlim _bioGate = new(10); 
+
 
     public ImdbTopActorsProvider(HttpClient httpClient)
     {
@@ -28,92 +32,173 @@ public sealed class ImdbTopActorsProvider : IActorProvider
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
 
-        var items = doc.DocumentNode
-            .SelectNodes("//div[contains(@class,'lister-item')]")
-            ?? doc.DocumentNode.SelectNodes("//li[contains(@class,'ipc-metadata-list-summary-item')]")
-            ?? new HtmlNodeCollection(null);
+        var jsonScripts = doc.DocumentNode.SelectNodes("//script[@type='application/ld+json']")
+                         ?? new HtmlNodeCollection(null);
 
-        var results = new List<Actor>(capacity: items.Count);
-        int rankCounter = 0;
+        JArray? itemList = null;
+        int totalExpected = 0;
 
-        foreach (var node in items)
+        foreach (var script in jsonScripts)
+        {
+            var text = script.InnerText?.Trim();
+            if (string.IsNullOrEmpty(text)) continue;
+
+            JToken root;
+            try { root = JToken.Parse(text); } catch { continue; }
+
+            if (root is JArray arr)
+            {
+                foreach (var obj in arr.OfType<JObject>())
+                {
+                    var items = obj["itemListElement"] as JArray;
+                    if (items != null && items.Count > 0)
+                    {
+                        itemList = items;
+                        totalExpected = (int?)obj["numberOfItems"] ?? 0;
+                        break;
+                    }
+                }
+            }
+            else if (root is JObject obj)
+            {
+                var items = obj["itemListElement"] as JArray;
+                if (items != null && items.Count > 0)
+                {
+                    itemList = items;
+                    totalExpected = (int?)obj["numberOfItems"] ?? 0;
+                }
+            }
+
+            if (itemList != null) break;
+        }
+
+        var results = new List<Actor>();
+        if (itemList == null || itemList.Count == 0)
+            return results;
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var tasks = new List<Task>();
+
+        foreach (var entry in itemList)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var rank = TryParseRank(node) ?? ++rankCounter;
-            var name = TryGetName(node);
-            if (string.IsNullOrWhiteSpace(name)) continue;
+            var rank = (int?)entry["position"] ?? 0;
+            var item = entry["item"];
+            if (item == null) continue;
 
-            results.Add(new Actor
+            var name = item["name"]?.ToString()?.Trim();
+            var url = item["url"]?.ToString();
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
+                continue;
+
+            var nmId = ExtractNmId(url);
+            if (string.IsNullOrEmpty(nmId)) continue;
+            if (!seen.Add(nmId)) continue;
+
+            var actor = new Actor
             {
-                Name = name.Trim(),
-                Details = TryGetDetails(node),
+                Name = name,
+                Details = string.Empty, // fill async later
                 Type = "Actor",
-                Rank = rank,
+                Rank = rank > 0 ? rank : (results.Count + 1),
                 Source = ProviderSource.Imdb
-            });
+            };
+
+            results.Add(actor);
+
+            tasks.Add(FillDetailsAsync(actor, entry, item, nmId, cancellationToken));
         }
 
-        results = results
-            .OrderBy(a => a.Rank)
+        await Task.WhenAll(tasks);
+
+        // Normalize ranks 1..N (stable sort: by provided rank, then name)
+        return results
+            .OrderBy(a => a.Rank == 0 ? int.MaxValue : a.Rank)
+            .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
             .Select((a, i) => { a.Rank = i + 1; return a; })
             .ToList();
-
-        return results;
     }
 
-    private static int? TryParseRank(HtmlNode node)
+    private static string? ExtractNmId(string urlOrPath)
     {
-        var text = node.SelectSingleNode(".//span[contains(@class,'lister-item-index')]")?.InnerText
-                ?? node.SelectSingleNode(".//div[contains(@class,'ipc-title__text')]")?.InnerText;
-        if (string.IsNullOrWhiteSpace(text)) return null;
-        var digits = new string(text.TakeWhile(char.IsDigit).ToArray());
-        return int.TryParse(digits, out var r) ? r : null;
+        var m = Regex.Match(urlOrPath, @"/name/(nm\d{1,9})", RegexOptions.IgnoreCase);
+        return m.Success ? m.Groups[1].Value : null;
     }
 
-    private static string? TryGetName(HtmlNode node)
+    private async Task FillDetailsAsync(Actor actor, JToken entry, JToken item, string nmId, CancellationToken ct)
     {
-        // 1) New IMDb layout: <h3 class="ipc-title__text ipc-title__text--reduced">
-        var h3 = node.SelectSingleNode(".//h3[contains(@class,'ipc-title__text')]");
-        
-        // 2) Fallback: <div class="ipc-title"> ... <a><h3>NAME</h3></a>
-        h3 ??= node.SelectSingleNode(".//div[contains(@class,'ipc-title')]//a//h3");
-        
-        // 3) Legacy list layout: <h3><a>NAME</a></h3>
-        h3 ??= node.SelectSingleNode(".//h3//a");
-        
-        // 4) Last resort: any anchor linking to /name/nm... (use text)
-        var textNode = h3 ?? node.SelectSingleNode(".//a[contains(@href,'/name/nm')]");
+        var desc = entry["description"]?.ToString()?.Trim()
+            ?? item["description"]?.ToString()?.Trim()
+            ?? item["disambiguatingDescription"]?.ToString()?.Trim()
+            ?? await TryFetchMiniBioAsync(_http, nmId, ct)
+            ?? string.Empty;
 
-        var raw = textNode?.InnerText;
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-
-        // Normalize: HTML-decode, collapse whitespace, strip any leading rank like "1. "
-        var decoded = HtmlEntity.DeEntitize(raw);
-        decoded = Regex.Replace(decoded, @"\s+", " ").Trim();
-        decoded = Regex.Replace(decoded, @"^\d+\s*[\.\)]\s*", ""); 
-
-        return string.IsNullOrWhiteSpace(decoded) ? null : decoded;
-    }
-
-    private static string? TryGetDetails(HtmlNode itemNode)
-    {
-        var candidate = itemNode.SelectSingleNode(".//*[@data-testid='dli-bio']")
-            ?? itemNode.SelectSingleNode(".//div[contains(@class,'ipc-html-content-inner-div')]")
-            ?? itemNode.SelectSingleNode(".//div[contains(@class,'ipc-html-content')]");
-
-        var raw = candidate?.InnerText;
-        return CleanText(raw);
-    }
-
-    private static string? CleanText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return null;
-
-        var decoded = HtmlEntity.DeEntitize(text);
-        decoded = Regex.Replace(decoded, @"\s+", " ").Trim();
-
-        return string.IsNullOrWhiteSpace(decoded) ? null : decoded;
+        actor.Details = desc;
     }
     
+    private static async Task<string?> TryFetchMiniBioAsync(HttpClient http, string nmId, CancellationToken ct)
+    {
+        if (_bioCache.TryGetValue(nmId, out var cached))
+            return cached;
+
+        await _bioGate.WaitAsync(ct);
+        try
+        {
+            if (_bioCache.TryGetValue(nmId, out cached))
+                return cached;
+
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(6));
+
+            var url = $"https://www.imdb.com/name/{nmId}/";
+            using var resp = await http.GetAsync(url, cts.Token);
+            if (!resp.IsSuccessStatusCode)
+            {
+                _bioCache[nmId] = string.Empty;
+                return string.Empty;
+            }
+
+            var html = await resp.Content.ReadAsStringAsync(cts.Token);
+            var doc = new HtmlAgilityPack.HtmlDocument();
+            doc.LoadHtml(html);
+
+            var node = doc.DocumentNode.SelectSingleNode(@".//*[@data-testid='name-bio-text'
+                                               or @data-testid='mini-bio'
+                                               or contains(@class,'ipc-html-content--base')
+                                               or contains(@class,'ipc-html-content-inner-div')
+                                               or contains(@class,'ipc-html-content')]");
+
+
+            var raw = node?.InnerText;
+            if (string.IsNullOrWhiteSpace(raw) && node != null)
+            {
+                var parts = node.SelectNodes(".//p|.//span");
+                if (parts is { Count: > 0 })
+                    raw = string.Join(" ", parts.Select(n => n.InnerText));
+            }
+
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                _bioCache[nmId] = string.Empty;
+                return string.Empty;
+            }
+
+            var text = HtmlEntity.DeEntitize(Regex.Replace(raw, @"\s+", " ").Trim());
+            _bioCache[nmId] = text;
+            return text;
+        }
+        catch
+        {
+            _bioCache[nmId] = string.Empty;
+            return string.Empty;
+        }
+        finally
+        {
+            _bioGate.Release();
+        }
+    }
+
+
 }
