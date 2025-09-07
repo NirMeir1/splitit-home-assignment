@@ -13,15 +13,16 @@ public static class ActorMapping
         {
             Id = a.Id,
             Name = a.Name,
-            Details = string.Empty,
-            Type = "Actor",
+            Details = a.Details,
+            Type = a.Type,
             Rank = a.Rank,
-            Source = a.Source.ToString() // enum -> string
+            Source = a.Source.ToString()
         };
 
     public static void Apply(this Actor target, ActorUpsertRequestDto dto)
     {
         target.Name = dto.Name.Trim();
         target.Rank = dto.Rank;
+        target.Details = (dto.Details ?? string.Empty).Trim();
     }
 }

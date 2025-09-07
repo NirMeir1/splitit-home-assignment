@@ -47,12 +47,10 @@ public sealed class ImdbTopActorsProvider : IActorProvider
             {
                 Name = name.Trim(),
                 Rank = rank,
-                Source = ProviderSource.Imdb,
-                ExternalId = TryGetExternalId(node)
+                Source = ProviderSource.Imdb
             });
         }
 
-        // Normalize ranks sequentially (defensive)
         results = results
             .OrderBy(a => a.Rank)
             .Select((a, i) => { a.Rank = i + 1; return a; })
@@ -75,14 +73,6 @@ public sealed class ImdbTopActorsProvider : IActorProvider
         var a = node.SelectSingleNode(".//h3//a")
              ?? node.SelectSingleNode(".//a[contains(@href,'/name/nm')]");
         return a?.InnerText?.Trim();
-    }
-
-    private static string? TryGetExternalId(HtmlNode node)
-    {
-        var href = node.SelectSingleNode(".//a[contains(@href,'/name/nm')]")?.GetAttributeValue("href", null);
-        if (string.IsNullOrWhiteSpace(href)) return null;
-        var parts = href.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        return parts.FirstOrDefault(p => p.StartsWith("nm", StringComparison.OrdinalIgnoreCase));
     }
 
     

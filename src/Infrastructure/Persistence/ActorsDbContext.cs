@@ -20,13 +20,15 @@ public sealed class ActorsDbContext : DbContext
             .IsRequired()
             .HasMaxLength(256);
 
+        e.Property(a => a.Details)
+            .HasMaxLength(1024);
+
+        e.Property(a => a.Type)
+            .IsRequired()
+            .HasMaxLength(32);
+
         e.Property(a => a.Rank)
             .IsRequired();
-
-        // Optional strings
-        e.Property(a => a.ExternalId);
-
-        // Store enum as string (readable)
         e.Property(a => a.Source).HasConversion<string>();
     }
 }

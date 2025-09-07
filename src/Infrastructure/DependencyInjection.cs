@@ -15,7 +15,6 @@ public static class DependencyInjection
 
         services.AddScoped<IActorRepository, ActorRepository>();
 
-        // Providers: use singleton so hosted service (singleton) can consume them
         services.AddHttpClient<ImdbTopActorsProvider>();
         services.AddSingleton<IActorProvider>(sp => sp.GetRequiredService<ImdbTopActorsProvider>());
         services.AddSingleton<IActorProvider, StubRottenTomatoesProvider>();

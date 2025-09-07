@@ -4,7 +4,6 @@ namespace SplititAssignment.Application.Actors.Validation;
 
 public static class ActorCreateUpdateValidator
 {
-    // Unified validation for POST/PUT upsert request
     public static ValidationResult Validate(string name, string? details, string type, int rank, string source)
     {
         var vr = new ValidationResult();
